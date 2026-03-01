@@ -23,7 +23,7 @@ section {padding:30px;max-width:900px;margin:auto;}
 #firedPage,#wrongPage,#reportFinished {display:none;background:black;color:red;height:100vh;text-align:center;padding-top:200px;font-family:Consolas;}
 #equipmentReport,#crimeReportBox {display:none;margin-top:10px;}
 #commanderNotifications {margin-top:20px;border-top:2px solid #00ff66;padding-top:15px;}
-#panicPopup {display:none;position:fixed;bottom:20px;right:20px;background:orange;color:black;padding:15px 25px;border-radius:6px;font-weight:bold;animation:pulse 1s 10;z-index:2000;}
+#panicPopup {display:none;position:fixed;bottom:20px;right:20px;background:orange;color:black;padding:15px 25px;border-radius:6px;font-weight:bold;animation:pulse 1s 10s;z-index:2000;}
 @keyframes pulse{0%{transform:scale(1);}50%{transform:scale(1.1);}100%{transform:scale(1);}}
 @media(max-width:600px){section{padding:15px;} .team-box,.terminal-box,.login-popup{margin:5px;padding:10px;} button{width:100%;margin-top:5px;} #equipmentReport select,#equipmentReport input,#crimeReportBox textarea{width:100%;}}
 </style>
@@ -182,3 +182,4 @@ function sendPanicNotification(){crimeReports.push({from:currentUser,text:"PANIC
 </body>
 
 </html>
+
