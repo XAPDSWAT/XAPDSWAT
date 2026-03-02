@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XAPD Secure System v1.3h</title>
+<style>
+body {margin:0;font-family:Arial;background:#0a0a1f;color:white;}
+header {background:#000814;padding:20px;text-align:center;position:relative;}
+.login-button {position:absolute;left:15px;top:15px;background:#00bfff;border:none;padding:10px;cursor:pointer;}
+section {padding:30px;max-width:900px;margin:auto;}
+.login-popup {display:none;position:fixed;top:80px;left:20px;background:black;border:1px solid #00ff66;padding:15px;z-index:1000;}
+.login-popup input {display:block;margin-bottom:10px;background:black;color:#00ff66;border:1px solid #00ff66;padding:5px;}
+#terminal {display:none;background:black;color:#00ff66;min-height:100vh;font-family:Consolas;}
+.terminal-header {padding:15px;border-bottom:2px solid #00ff66;}
+.terminal-box {border:1px solid #00ff66;margin:20px;padding:20px;}
+.logout-btn {background:red;color:white;border:none;padding:10px;cursor:pointer;float:right;}
+.fire-btn {background:red;color:white;border:none;padding:5px 10px;margin-left:10px;cursor:pointer;}
+.patrol-btn {background:#00ff66;color:black;border:none;padding:8px;margin-left:5px;cursor:pointer;}
+.patrol-status {margin-left:10px;font-weight:bold;}
+.panic-btn {background:orange;color:black;border:none;padding:10px;cursor:pointer;margin-top:10px;font-weight:bold;}
+.back-btn {background:#00ff66;border:none;padding:8px;margin-top:8px;cursor:pointer;}
+.eye-btn {background:#00ff66;border:none;color:black;padding:5px;margin-left:5px;}
+#firedPage,#wrongPage,#reportFinished {display:none;background:black;color:red;height:100vh;text-align:center;padding-top:200px;font-family:Consolas;}
+#equipmentReport,#crimeReportBox {display:none;margin-top:10px;}
+#commanderNotifications {margin-top:20px;border-top:2px solid #00ff66;padding-top:15px;}
+#panicPopup {display:none;position:fixed;bottom:20px;right:20px;background:orange;color:black;padding:15px 25px;border-radius:6px;font-weight:bold;animation:pulse 1s 10s;z-index:2000;}
+@keyframes pulse{0%{transform:scale(1);}50%{transform:scale(1.1);}100%{transform:scale(1);}}
+@media(max-width:600px){section{padding:15px;} .team-box,.terminal-box,.login-popup{margin:5px;padding:10px;} button{width:100%;margin-top:5px;} #equipmentReport select,#equipmentReport input,#crimeReportBox textarea{width:100%;}}
+</style>
+</head>
+<body>
+
+<div id="publicSite">
+<header>
+<button class="login-button" onclick="openLogin()">Employee Login</button>
+<h1>Xandland Police Department</h1>
+<p>Special Weapons and Tactics Division</p>
+</header>
+
+<section>
+<h2>About</h2>
+<p>XAPD SWAT handles high-risk tactical situations.</p>
+<p>Special thanks to <a href="https://www.youtube.com/@DasTheGamerYT" target="_blank">@DasTheGamerYT</a></p>
+</section>
+
+<section>
+<h2>Auction Notice</h2>
+<p>Decommissioned S.W.A.T cars auction on 15.03.26</p>
+</section>
+
+<section>
+<h2>Version</h2>
+<p>v1.3h - Employees able to go on patrol, activity timestamped and homepage cleaned.</p>
+</section>
+</div>
+
+<div class="login-popup" id="loginPopup">
+<input id="username" placeholder="USERNAME">
+<div style="display:flex;align-items:center;">
+<input id="password" type="password" placeholder="PASSWORD">
+<button class="eye-btn" onclick="togglePassword()">👁</button>
+</div>
+<button onclick="login()">LOGIN</button>
+</div>
+
+<div id="terminal">
+<div class="terminal-header">
+<h1>XAPD SECURE DATABASE TERMINAL</h1>
+<button class="logout-btn" onclick="logout()">LOGOUT</button>
+</div>
+
+<div class="terminal-box">
+<p>> SYSTEM STATUS: ONLINE</p>
+<p>> RECENT MISSIONS:</p>
+<ul>
+<li>22.02.26: Hostage situation in Main Industrial Park</li>
+<li>28.02.26: Barricade situation in Housing Suburb</li>
+<li>01.03.26: Armed robbery and shootout at First Xandish Bank. Resolved with one casualty.</li>
+</ul>
+<button class="back-btn" onclick="toggleEquipmentReport()">I lost equipment</button>
+<div id="equipmentReport">
+<select id="equipmentSelect" onchange="showFinish()">
+<option value="">Select item...</option>
+<option>Gun</option>
+<option>Baton</option>
+<option>Radio</option>
+<option>Uniform</option>
+<option>Other</option>
+</select>
+<input id="otherEquipment" placeholder="Specify item" style="display:none;">
+<button id="finishEquipment" style="display:none;" onclick="finishEquipment()">Finish</button>
+</div>
+</div>
+
+<div class="terminal-box">
+<p>> EMPLOYEE ROSTER</p>
+<div id="EQ20">EQ20 - ELITESQUADLEADER</div>
+<div id="HSW1">HSW1 - HEADSWATCOMMANDER</div>
+<div id="TESTER">TESTER - Employee</div>
+<div id="EQ21">EQ21 - Officer</div>
+<div id="EQ22">EQ22 - Officer</div>
+<div id="EQ23">EQ23 - Officer</div>
+<div id="EQ24">EQ24 - Officer</div>
+<div id="EQ25">EQ25 - Officer</div>
+<div id="EQ26">EQ26 - Officer</div>
+<div id="Jacob">Jacob - Officer</div>
+<div id="Aarav">Aarav - Officer</div>
+<div id="LSNIPER">LSNIPER - LEADSNIPER</div>
+<div id="LTO">LTO - TACTICALOFFICER</div>
+<div id="NGT">NGT - TheNegotiator</div>
+</div>
+
+<div class="terminal-box">
+<button class="panic-btn" onclick="panic()">PANIC</button>
+<button class="back-btn" onclick="toggleCrimeReport()">Report Crime</button>
+<div id="crimeReportBox">
+<textarea id="crimeInput" rows="4" cols="50" placeholder="Type report..."></textarea>
+<button onclick="submitCrimeReport()">Send</button>
+</div>
+</div>
+
+<div class="terminal-box" id="employeePatrolBox">
+<button class="patrol-btn" onclick="toggleMyPatrol()">Toggle Patrol</button>
+<span id="patrolStatusText" class="patrol-status">Off Patrol</span>
+</div>
+
+<div class="terminal-box" id="commanderNotifications"></div>
+</div>
+
+<div id="firedPage">
+<h1>EMPLOYEE FIRED</h1>
+<button class="back-btn" onclick="backToTerminal()">Back</button>
+</div>
+
+<div id="wrongPage">
+<h1>If you are going to try to hack an account at least get the username and password correct. You should be ashamed of yourself.</h1>
+<button class="back-btn" onclick="returnHome()">Back</button>
+</div>
+
+<div id="reportFinished">
+<h2>Report submitted.</h2>
+<button class="back-btn" onclick="returnToTerminal()">Return</button>
+</div>
+
+<div id="panicPopup">Units are on the way. Stay safe.</div>
+
+<script>
+let currentUser="";
+let crimeReports=JSON.parse(localStorage.getItem("crimeReports")||"[]");
+let patrolStatus=JSON.parse(localStorage.getItem("patrolStatus")||"{}");
+let loginTimestamps=JSON.parse(localStorage.getItem("loginTimestamps")||"{}");
+
+const logins={
+"ELITESQUADLEADER":"XAPDSWATPASSWORD",
+"HEADSWATCOMMANDER":"MyAmazingPassword",
+"Employee":"XAPDSWATPASSWORD",
+"EQ21":"XAPDSWATPASSWORD",
+"EQ22":"XAPDSWATPASSWORD",
+"EQ23":"XAPDSWATPASSWORD",
+"EQ24":"XAPDSWATPASSWORD",
+"EQ25":"XAPDSWATPASSWORD",
+"EQ26":"EQ26",
+"Jacob":"Martin",
+"Aarav":"Patel",
+"LEADSNIPER":"SWATsnipingPASSWORD",
+"TACTICALOFFICER":"mowmowmow",
+"TheNegotiator":"NegotiatingASmarken",
+"HeadDispatcher":"DiSpAtChInG"
+};
+
+["EQ20","HSW1","TESTER","EQ21","EQ22","EQ23","EQ24","EQ25","EQ26","Jacob","Aarav","LSNIPER","LTO","NGT"].forEach(id=>{
+    if(patrolStatus[id]===undefined) patrolStatus[id]=false;
+});
+
+function openLogin(){document.getElementById("loginPopup").style.display="block";}
+function togglePassword(){let p=document.getElementById("password");p.type=p.type==="password"?"text":"password";}
+function login(){
+    let u=document.getElementById("username").value;
+    let p=document.getElementById("password").value;
+    if(logins[u]&&logins[u]===p){
+        currentUser=u;
+        const ts=new Date().toLocaleString("en-GB",{hour12:false});
+        loginTimestamps[u]={login:ts,logout:loginTimestamps[u]?.logout||"-"};
+        localStorage.setItem("loginTimestamps",JSON.stringify(loginTimestamps));
+        document.getElementById("publicSite").style.display="none";
+        document.getElementById("terminal").style.display="block";
+        document.getElementById("loginPopup").style.display="none";
+        updatePatrolText();
+        if(u==="HEADSWATCOMMANDER"){addFireButtons();}
+        showCommanderNotifications();
+    } else {
+        document.getElementById("publicSite").style.display="none";
+        document.getElementById("loginPopup").style.display="none";
+        document.getElementById("wrongPage").style.display="block";
+    }
+}
+function logout(){
+    const ts=new Date().toLocaleString("en-GB",{hour12:false});
+    loginTimestamps[currentUser]={...loginTimestamps[currentUser],logout:ts};
+    localStorage.setItem("loginTimestamps",JSON.stringify(loginTimestamps));
+    currentUser="";
+    document.getElementById("terminal").style.display="none";
+    document.getElementById("publicSite").style.display="block";
+    showCommanderNotifications();
+}
+
+function addFireButtons(){["EQ20","HSW1","TESTER","EQ21","EQ22","EQ23","EQ24","EQ25","EQ26","Jacob","Aarav","LSNIPER","LTO","NGT"].forEach(id=>{
+    let div=document.getElementById(id);
+    if(!div.querySelector(".fire-btn")){
+        let btn=document.createElement("button");
+        btn.innerText="FIRE";
+        btn.className="fire-btn";
+        btn.onclick=()=>fireEmployee(div.id);
+        div.appendChild(btn);
+    }
+});}
+
+function fireEmployee(empId){alert("You have been fired by your commander.");document.getElementById("terminal").style.display="none";document.getElementById("firedPage").style.display="block";}
+function backToTerminal(){document.getElementById("firedPage").style.display="none";document.getElementById("terminal").style.display="block";}
+function returnHome(){document.getElementById("wrongPage").style.display="none";document.getElementById("publicSite").style.display="block";document.querySelector(".login-button").style.display="none";}
+function returnToTerminal(){document.getElementById("reportFinished").style.display="none";document.getElementById("terminal").style.display="block";}
+
+function panic(){
+    const ts=new Date().toLocaleString("en-GB",{hour12:false});
+    document.getElementById("panicPopup").style.display="block";
+    crimeReports.push({from:currentUser,text:"PANIC ALERT",time:ts});
+    localStorage.setItem("crimeReports",JSON.stringify(crimeReports));
+    showCommanderNotifications();
+}
+
+function toggleEquipmentReport(){let box=document.getElementById("equipmentReport");box.style.display=box.style.display==="block"?"none":"block";}
+function showFinish(){let select=document.getElementById("equipmentSelect");document.getElementById("otherEquipment").style.display=select.value==="Other"?"block":"none";document.getElementById("finishEquipment").style.display=select.value?"block":"none";}
+function finishEquipment(){
+    const ts=new Date().toLocaleString("en-GB",{hour12:false});
+    document.getElementById("equipmentReport").style.display="none";
+    document.getElementById("reportFinished").style.display="block";
+    crimeReports.push({from:currentUser,text:"Reported missing equipment",time:ts});
+    localStorage.setItem("crimeReports",JSON.stringify(crimeReports));
+    showCommanderNotifications();
+}
+
+function toggleCrimeReport(){let box=document.getElementById("crimeReportBox");box.style.display=box.style.display==="block"?"none":"block";}
+function submitCrimeReport(){
+    let val=document.getElementById("crimeInput").value.trim();
+    if(!val) return;
+    const ts=new Date().toLocaleString("en-GB",{hour12:false});
+    crimeReports.push({from:currentUser,text:val,time:ts});
+    localStorage.setItem("crimeReports",JSON.stringify(crimeReports));
+    document.getElementById("crimeInput").value="";
+    document.getElementById("crimeReportBox").style.display="none";
+    showCommanderNotifications();
+}
+
+function updatePatrolText(){
+    const status=document.getElementById("patrolStatusText");
+    status.textContent=patrolStatus[currentUser]?"On Patrol":"Off Patrol";
+}
+
+function toggleMyPatrol(){
+    patrolStatus[currentUser]=!patrolStatus[currentUser];
+    localStorage.setItem("patrolStatus",JSON.stringify(patrolStatus));
+    const ts=new Date().toLocaleString("en-GB",{hour12:false});
+    crimeReports.push({from:currentUser,text:`Toggled patrol ${patrolStatus[currentUser]?"ON":"OFF"}`,time:ts});
+    localStorage.setItem("crimeReports",JSON.stringify(crimeReports));
+    updatePatrolText();
+    showCommanderNotifications();
+}
+
+function showCommanderNotifications(){
+    let box=document.getElementById("commanderNotifications"); 
+    if(currentUser!=="HEADSWATCOMMANDER" && currentUser!=="HeadDispatcher"){box.innerHTML=""; return;} 
+    box.innerHTML="<h3>Commander Notifications</h3>"; 
+    if(!crimeReports.length){box.innerHTML+="<p>No new notifications</p>";} 
+    else{
+        box.innerHTML+="<p><strong>Reports</strong></p><ul>"; 
+        crimeReports.forEach((r,i)=>{box.innerHTML+=`<li>${r.time} - ${r.from}: ${r.text} <button onclick="ackCrime(${i})">Mark Read</button></li>`}); 
+        box.innerHTML+="</ul>";
+    }
+
+    if(currentUser==="HeadDispatcher"){
+        // Show patrol status always
+        box.innerHTML+="<p><strong>Patrol Status</strong></p><ul>";
+        Object.keys(patrolStatus).forEach(emp=>{
+            box.innerHTML+=`<li>${emp}: ${patrolStatus[emp]?"On Patrol":"Off Patrol"}</li>`;
+        });
+        box.innerHTML+="</ul>";
+
+        // Login/Logout timestamps always visible
+        box.innerHTML+="<p><strong>Login Activity</strong></p><ul>";
+        Object.keys(loginTimestamps).forEach(emp=>{
+            const ts=loginTimestamps[emp];
+            box.innerHTML+=`<li>${emp}: Login ${ts.login||"-"}, Logout ${ts.logout||"-"}</li>`;
+        });
+        box.innerHTML+="</ul>";
+    }
+}
+
+function ackCrime(i){crimeReports.splice(i,1); localStorage.setItem("crimeReports",JSON.stringify(crimeReports)); showCommanderNotifications();}
+</script>
+</body>
+</html>
