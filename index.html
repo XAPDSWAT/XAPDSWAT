@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>XAPD Secure System v1.3 </title>
+<title>XAPD Secure System v1.3</title>
 <style>
 body {margin:0;font-family:Arial;background:#0a0a1f;color:white;}
 header {background:#000814;padding:20px;text-align:center;position:relative;}
@@ -56,7 +56,7 @@ button{width:100%;margin-top:5px;}
 
 <section>
 <h2>Version</h2>
-<p>v1.3 - Patrol toggle fixed, Head Dispatcher always sees statuses, timestamps included</p>
+<p>v1.3 - Patrol toggle fixed, Head Dispatcher always sees statuses, timestamps included and bug fixes.</p>
 </section>
 </div>
 
@@ -114,6 +114,7 @@ button{width:100%;margin-top:5px;}
 <div id="LSNIPER">LSNIPER - LEADSNIPER</div>
 <div id="LTO">LTO - TACTICALOFFICER</div>
 <div id="NGT">NGT - TheNegotiator</div>
+<div id="DasTheGamerYT">DasTheGamerYT - Officer</div>
 </div>
 
 <div class="terminal-box">
@@ -172,11 +173,12 @@ const logins={
 "LEADSNIPER":"SWATsnipingPASSWORD",
 "TACTICALOFFICER":"mowmowmow",
 "TheNegotiator":"NegotiatingASmarken",
-"HeadDispatcher":"DiSpAtChInG"
+"HeadDispatcher":"DiSpAtChInG",
+"DasTheGamerYT":"TheUltimateYouTuber"
 };
 
 // Initialize patrol status
-Object.keys(logins).forEach(id=>{
+["EQ20","HSW1","TESTER","EQ21","EQ22","EQ23","EQ24","EQ25","EQ26","Jacob","Aarav","NGT","LTO","LSNIPER","DasTheGamerYT"].forEach(id=>{
 if(patrolStatus[id]===undefined) patrolStatus[id]=false;
 });
 
@@ -195,6 +197,7 @@ document.getElementById("publicSite").style.display="none";
 document.getElementById("terminal").style.display="block";
 document.getElementById("loginPopup").style.display="none";
 updatePatrolText();
+addFireButtons();
 showCommanderNotifications();
 }else{
 document.getElementById("publicSite").style.display="none";
@@ -215,7 +218,7 @@ document.getElementById("publicSite").style.display="block";
 function returnHome(){
 document.getElementById("wrongPage").style.display="none";
 document.getElementById("publicSite").style.display="block";
-document.querySelector(".login-button").style.display="none"; // hide login button
+document.querySelector(".login-button").style.display="none";
 }
 
 function panic(){
@@ -238,33 +241,37 @@ document.getElementById("patrolStatusText").textContent=
 patrolStatus[currentUser]?"On Patrol":"Off Patrol";
 }
 
-function toggleCrimeReport(){
-let box=document.getElementById("crimeReportBox");
-box.style.display=box.style.display==="block"?"none":"block";
+// Show FIRE buttons for commander
+function addFireButtons(){["EQ20","HSW1","TESTER","EQ21","EQ22","EQ23","EQ24","EQ25","EQ26","Jacob","Aarav","NGT","LTO","LSNIPER","DasTheGamerYT"].forEach(id=>{
+let div=document.getElementById(id);
+if(!div.querySelector(".fire-btn")){
+let btn=document.createElement("button");
+btn.innerText="FIRE";
+btn.className="fire-btn";
+btn.onclick=()=>fireEmployee(div.id);
+div.appendChild(btn);
 }
+});}
 
-function submitCrimeReport(){
-let val=document.getElementById("crimeInput").value.trim();
-if(!val) return;
-const ts=new Date().toLocaleString("en-GB",{hour12:false});
-crimeReports.push({from:currentUser,text:val,time:ts});
-localStorage.setItem("crimeReports",JSON.stringify(crimeReports));
-document.getElementById("crimeInput").value="";
-document.getElementById("crimeReportBox").style.display="none";
-showCommanderNotifications();
-}
+function fireEmployee(empId){alert("You have been fired by your commander.");document.getElementById("terminal").style.display="none";document.getElementById("firedPage").style.display="block";}
+function backToTerminal(){document.getElementById("firedPage").style.display="none";document.getElementById("terminal").style.display="block";}
+
+function toggleCrimeReport(){let box=document.getElementById("crimeReportBox");box.style.display=box.style.display==="block"?"none":"block";}
+function submitCrimeReport(){let val=document.getElementById("crimeInput").value.trim();if(!val)return;const ts=new Date().toLocaleString("en-GB",{hour12:false});crimeReports.push({from:currentUser,text:val,time:ts});localStorage.setItem("crimeReports",JSON.stringify(crimeReports));document.getElementById("crimeInput").value="";document.getElementById("crimeReportBox").style.display="none";showCommanderNotifications();}
 
 function showCommanderNotifications(){
-let box=document.getElementById("commanderNotifications");
-if(currentUser!=="HEADSWATCOMMANDER"&&currentUser!=="HeadDispatcher"){box.innerHTML="";return;}
-box.innerHTML="<h3>Command Console</h3>";
-
-box.innerHTML+="<p><strong>Reports</strong></p><ul>";
-crimeReports.forEach((r,i)=>{
-box.innerHTML+=`<li>${r.time} - ${r.from}: ${r.text}</li>`;
-});
+let box=document.getElementById("commanderNotifications"); 
+if(currentUser!=="HEADSWATCOMMANDER" && currentUser!=="HeadDispatcher" && currentUser!=="DasTheGamerYT"){box.innerHTML=""; return;} 
+box.innerHTML="<h3>Commander Notifications</h3>"; 
+if(!crimeReports.length){box.innerHTML+="<p>No new notifications</p>";} 
+else{
+box.innerHTML+="<p><strong>Reports</strong></p><ul>"; 
+crimeReports.forEach((r,i)=>{box.innerHTML+=`<li>${r.time} - ${r.from}: ${r.text}</li>`}); 
 box.innerHTML+="</ul>";
+}
 
+// Show patrol and login info for HeadDispatcher + DasTheGamerYT
+if(currentUser==="HeadDispatcher" || currentUser==="DasTheGamerYT"){
 box.innerHTML+="<p><strong>Patrol Status</strong></p><ul>";
 Object.keys(patrolStatus).forEach(emp=>{
 box.innerHTML+=`<li>${emp}: ${patrolStatus[emp]?"On Patrol":"Off Patrol"}</li>`;
@@ -278,10 +285,6 @@ box.innerHTML+=`<li>${emp}: Login ${ts.login||"-"}, Logout ${ts.logout||"-"}</li
 });
 box.innerHTML+="</ul>";
 }
-
-function backToTerminal(){
-document.getElementById("firedPage").style.display="none";
-document.getElementById("terminal").style.display="block";
 }
 </script>
 </body>
