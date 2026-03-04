@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>XAPD Secure System v1.3h</title>
+<title>XAPD Secure System v1.3 </title>
 <style>
 body {margin:0;font-family:Arial;background:#0a0a1f;color:white;}
 header {background:#000814;padding:20px;text-align:center;position:relative;}
@@ -139,7 +139,7 @@ button{width:100%;margin-top:5px;}
 </div>
 
 <div id="wrongPage">
-<h1>Incorrect login credentials.</h1>
+<h1>If you are going to attempt to hack someone's account, at least get the username and password correct. You should be ashamed of yourself.</h1>
 <button class="back-btn" onclick="returnHome()">Back</button>
 </div>
 
@@ -175,6 +175,7 @@ const logins={
 "HeadDispatcher":"DiSpAtChInG"
 };
 
+// Initialize patrol status
 Object.keys(logins).forEach(id=>{
 if(patrolStatus[id]===undefined) patrolStatus[id]=false;
 });
@@ -209,6 +210,12 @@ localStorage.setItem("loginTimestamps",JSON.stringify(loginTimestamps));
 currentUser="";
 document.getElementById("terminal").style.display="none";
 document.getElementById("publicSite").style.display="block";
+}
+
+function returnHome(){
+document.getElementById("wrongPage").style.display="none";
+document.getElementById("publicSite").style.display="block";
+document.querySelector(".login-button").style.display="none"; // hide login button
 }
 
 function panic(){
@@ -276,15 +283,6 @@ function backToTerminal(){
 document.getElementById("firedPage").style.display="none";
 document.getElementById("terminal").style.display="block";
 }
-function returnHome(){
-document.getElementById("wrongPage").style.display="none";
-document.getElementById("publicSite").style.display="block";
-}
-function returnToTerminal(){
-document.getElementById("reportFinished").style.display="none";
-document.getElementById("terminal").style.display="block";
-}
 </script>
 </body>
 </html>
-
