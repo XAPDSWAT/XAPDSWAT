@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>XAPD Secure System v1.3</title>
+<title>XAPD Secure System v1.4</title>
 <style>
 body {margin:0;font-family:Arial;background:#0a0a1f;color:white;}
 header {background:#000814;padding:20px;text-align:center;position:relative;}
@@ -24,21 +24,15 @@ section {padding:30px;max-width:900px;margin:auto;}
 #firedPage,#wrongPage,#reportFinished {display:none;background:black;color:red;height:100vh;text-align:center;padding-top:200px;font-family:Consolas;}
 #equipmentReport,#crimeReportBox {display:none;margin-top:10px;}
 #commanderNotifications {margin-top:20px;border-top:2px solid #00ff66;padding-top:15px;}
-#panicPopup {display:none;position:fixed;bottom:20px;right:20px;background:orange;color:black;padding:15px 25px;border-radius:6px;font-weight:bold;animation:pulse 1s 10s;z-index:2000;}
-@keyframes pulse{0%{transform:scale(1);}50%{transform:scale(1.1);}100%{transform:scale(1);}}
-@media(max-width:600px){
-section{padding:15px;}
-.team-box,.terminal-box,.login-popup{margin:5px;padding:10px;}
-button{width:100%;margin-top:5px;}
-#equipmentReport select,#equipmentReport input,#crimeReportBox textarea{width:100%;}
-}
+#panicPopup {display:none;position:fixed;bottom:20px;right:20px;background:orange;color:black;padding:15px 25px;border-radius:6px;font-weight:bold;z-index:2000;}
+.hidden {display:none;}
 </style>
 </head>
 <body>
 
 <div id="publicSite">
 <header>
-<button class="login-button" onclick="openLogin()">Employee Login</button>
+<button class="login-button" id="loginBtn" onclick="openLogin()">Employee Login</button>
 <h1>Xandland Police Department</h1>
 <p>Special Weapons and Tactics Division</p>
 </header>
@@ -51,12 +45,12 @@ button{width:100%;margin-top:5px;}
 
 <section>
 <h2>Auction Notice</h2>
-<p>Decommissioned S.W.A.T cars auction on 15.03.26</p>
+<p>Decommissioned S.W.A.T cars auction on 16/03/2026</p>
 </section>
 
 <section>
 <h2>Version</h2>
-<p>v1.3 - Patrol toggle fixed, Head Dispatcher always sees statuses, timestamps included and bug fixes.</p>
+<p>v1.4 - Security upgrades, panic cooldown, structured reports, permissions, activity display + dispatch, messaging, status system.</p>
 </section>
 </div>
 
@@ -72,219 +66,213 @@ button{width:100%;margin-top:5px;}
 <div id="terminal">
 <div class="terminal-header">
 <h1>XAPD SECURE DATABASE TERMINAL</h1>
+<span id="currentUserDisplay"></span>
 <button class="logout-btn" onclick="logout()">LOGOUT</button>
 </div>
 
 <div class="terminal-box">
-<p>> SYSTEM STATUS: ONLINE</p>
-<p>> RECENT MISSIONS:</p>
-<ul>
-<li>22.02.26: Hostage situation in Main Industrial Park</li>
-<li>28.02.26: Barricade situation in Housing Suburb</li>
-<li>01.03.26: Armed robbery and shootout at First Xandish Bank. Resolved with one casualty.</li>
-</ul>
-<button class="back-btn" onclick="toggleEquipmentReport()">I lost equipment</button>
-<div id="equipmentReport">
-<select id="equipmentSelect" onchange="showFinish()">
-<option value="">Select item...</option>
-<option>Gun</option>
-<option>Baton</option>
-<option>Radio</option>
-<option>Uniform</option>
-<option>Other</option>
+<p>> UNIT STATUS</p>
+<select id="statusSelect" onchange="setStatus()">
+<option>Available</option>
+<option>On Patrol</option>
+<option>Busy</option>
+<option>Responding</option>
+<option>Offline</option>
 </select>
-<input id="otherEquipment" placeholder="Specify item" style="display:none;">
-<button id="finishEquipment" style="display:none;" onclick="finishEquipment()">Finish</button>
+<p id="statusText"></p>
 </div>
+
+<div class="terminal-box">
+<p>> DISPATCH BOARD</p>
+<select id="dispatchType">
+<option>Robbery</option>
+<option>Shooting</option>
+<option>Suspicious Activity</option>
+</select>
+<input id="dispatchLocation" placeholder="Location">
+<button onclick="createCall()">Create Call</button>
+<div id="dispatchList"></div>
+</div>
+
+<div class="terminal-box">
+<p>> PRIVATE MESSAGES</p>
+<select id="msgTo"></select>
+<textarea id="msgText" placeholder="Message"></textarea>
+<button onclick="sendMessage()">Send</button>
+<div id="inbox"></div>
 </div>
 
 <div class="terminal-box">
 <p>> EMPLOYEE ROSTER</p>
-<div id="EQ20">EQ20 - ELITESQUADLEADER</div>
-<div id="HSW1">HSW1 - HEADSWATCOMMANDER</div>
-<div id="TESTER">TESTER - Employee</div>
-<div id="EQ21">EQ21 - Officer</div>
-<div id="EQ22">EQ22 - Officer</div>
-<div id="EQ23">EQ23 - Officer</div>
-<div id="EQ24">EQ24 - Officer</div>
-<div id="EQ25">EQ25 - Officer</div>
-<div id="EQ26">EQ26 - Officer</div>
-<div id="Jacob">Jacob - Officer</div>
-<div id="Aarav">Aarav - Officer</div>
-<div id="LSNIPER">LSNIPER - LEADSNIPER</div>
-<div id="LTO">LTO - TACTICALOFFICER</div>
-<div id="NGT">NGT - TheNegotiator</div>
-<div id="DasTheGamerYT">DasTheGamerYT - Officer</div>
+<div id="roster"></div>
 </div>
 
 <div class="terminal-box">
 <button class="panic-btn" onclick="panic()">PANIC</button>
-<button class="back-btn" onclick="toggleCrimeReport()">Report Crime</button>
-<div id="crimeReportBox">
-<textarea id="crimeInput" rows="4" placeholder="Type report..."></textarea>
-<button onclick="submitCrimeReport()">Send</button>
-</div>
 </div>
 
-<div class="terminal-box">
-<button class="patrol-btn" onclick="toggleMyPatrol()">Toggle Patrol</button>
-<span id="patrolStatusText" class="patrol-status">Off Patrol</span>
-</div>
-
-<div class="terminal-box" id="commanderNotifications"></div>
-</div>
-
-<div id="firedPage">
-<h1>EMPLOYEE FIRED</h1>
-<button class="back-btn" onclick="backToTerminal()">Back</button>
 </div>
 
 <div id="wrongPage">
-<h1>If you are going to attempt to hack someone's account, at least get the username and password correct. You should be ashamed of yourself.</h1>
+<h1>If you are going to attempt to hack someone's account, at least get the username and password correct.</h1>
 <button class="back-btn" onclick="returnHome()">Back</button>
-</div>
-
-<div id="reportFinished">
-<h2>Report submitted.</h2>
-<button class="back-btn" onclick="returnToTerminal()">Return</button>
 </div>
 
 <div id="panicPopup">Units are on the way. Stay safe.</div>
 
 <script>
 let currentUser="";
-let crimeReports=JSON.parse(localStorage.getItem("crimeReports")||"[]");
-let patrolStatus=JSON.parse(localStorage.getItem("patrolStatus")||"{}");
-let loginTimestamps=JSON.parse(localStorage.getItem("loginTimestamps")||"{}");
+let statuses=JSON.parse(localStorage.getItem("statuses")||"{}");
+let messages=JSON.parse(localStorage.getItem("messages")||"[]");
+let calls=JSON.parse(localStorage.getItem("calls")||"[]");
+let lastPanic=0;
+
+const users=["EQ20","HSW1","TESTER","EQ21","EQ22","EQ23","EQ24","EQ25","EQ26","Jacob","Aarav","LSNIPER","LTO","NGT","DasTheGamerYT","HeadDispatcher","HEADSWATCOMMANDER","M.Chaloner"];
 
 const logins={
-"ELITESQUADLEADER":"XAPDSWATPASSWORD",
 "HEADSWATCOMMANDER":"MyAmazingPassword",
-"Employee":"XAPDSWATPASSWORD",
-"EQ21":"XAPDSWATPASSWORD",
-"EQ22":"XAPDSWATPASSWORD",
-"EQ23":"XAPDSWATPASSWORD",
-"EQ24":"XAPDSWATPASSWORD",
-"EQ25":"XAPDSWATPASSWORD",
 "EQ26":"EQ26",
-"Jacob":"Martin",
-"Aarav":"Patel",
-"M.Chaloner":"MyVerySecurePassword",
-"LEADSNIPER":"SWATsnipingPASSWORD",
-"TACTICALOFFICER":"mowmowmow",
-"TheNegotiator":"NegotiatingASmarken",
 "HeadDispatcher":"DiSpAtChInG",
 "DasTheGamerYT":"TheUltimateYouTuber"
 };
 
-// Initialize patrol status
-["EQ20","HSW1","TESTER","EQ21","EQ22","EQ23","EQ24","EQ25","EQ26","Jacob","Aarav","NGT","LTO","LSNIPER","DasTheGamerYT"].forEach(id=>{
-if(patrolStatus[id]===undefined) patrolStatus[id]=false;
-});
-
-function openLogin(){document.getElementById("loginPopup").style.display="block";}
-function togglePassword(){let p=document.getElementById("password");p.type=p.type==="password"?"text":"password";}
+function openLogin(){loginPopup.style.display="block";}
+function togglePassword(){password.type=password.type==="password"?"text":"password";}
 
 function login(){
-let u=document.getElementById("username").value;
-let p=document.getElementById("password").value;
+let u=username.value;
+let p=password.value;
 if(logins[u]&&logins[u]===p){
 currentUser=u;
-const ts=new Date().toLocaleString("en-GB",{hour12:false});
-loginTimestamps[u]={login:ts,logout:loginTimestamps[u]?.logout||"-"};
-localStorage.setItem("loginTimestamps",JSON.stringify(loginTimestamps));
-document.getElementById("publicSite").style.display="none";
-document.getElementById("terminal").style.display="block";
-document.getElementById("loginPopup").style.display="none";
-updatePatrolText();
-addFireButtons();
-showCommanderNotifications();
+publicSite.style.display="none";
+terminal.style.display="block";
+loginPopup.style.display="none";
+currentUserDisplay.innerText="Logged in as: "+currentUser;
+populateUsers();
+renderAll();
 }else{
-document.getElementById("publicSite").style.display="none";
-document.getElementById("loginPopup").style.display="none";
-document.getElementById("wrongPage").style.display="block";
+publicSite.style.display="none";
+loginPopup.style.display="none";
+wrongPage.style.display="block";
+loginBtn.style.display="none";
 }
 }
 
-function logout(){
-const ts=new Date().toLocaleString("en-GB",{hour12:false});
-loginTimestamps[currentUser]={...loginTimestamps[currentUser],logout:ts};
-localStorage.setItem("loginTimestamps",JSON.stringify(loginTimestamps));
-currentUser="";
-document.getElementById("terminal").style.display="none";
-document.getElementById("publicSite").style.display="block";
+function logout(){location.reload();}
+function returnHome(){wrongPage.style.display="none";publicSite.style.display="block";}
+
+function populateUsers(){
+msgTo.innerHTML="";
+users.forEach(u=>{
+if(u!==currentUser){
+let opt=document.createElement("option");
+opt.textContent=u;
+msgTo.appendChild(opt);
+}
+});
+renderRoster();
 }
 
-function returnHome(){
-document.getElementById("wrongPage").style.display="none";
-document.getElementById("publicSite").style.display="block";
-document.querySelector(".login-button").style.display="none";
+function renderRoster(){
+roster.innerHTML="";
+users.forEach(u=>{
+if(u==="M.Chaloner" && !(currentUser==="HEADSWATCOMMANDER"||currentUser==="HeadDispatcher")) return;
+let div=document.createElement("div");
+div.textContent=u+" - "+(statuses[u]||"Unknown");
+roster.appendChild(div);
+});
+}
+
+function setStatus(){
+statuses[currentUser]=statusSelect.value;
+localStorage.setItem("statuses",JSON.stringify(statuses));
+renderAll();
+}
+
+function renderAll(){
+statusText.innerText="Status: "+(statuses[currentUser]||"None");
+renderMessages();
+renderCalls();
+renderRoster();
+}
+
+function sendMessage(){
+let to=msgTo.value;
+let text=msgText.value.trim();
+if(!text)return;
+messages.push({id:Date.now(),from:currentUser,to,text});
+localStorage.setItem("messages",JSON.stringify(messages));
+msgText.value="";
+renderMessages();
+}
+
+function renderMessages(){
+inbox.innerHTML="<h4>Inbox</h4>";
+messages.filter(m=>m.to===currentUser).forEach(m=>{
+let d=document.createElement("div");
+d.textContent=m.from+": "+m.text;
+let btn=document.createElement("button");
+btn.textContent="Mark Read";
+btn.onclick=()=>{
+messages=messages.filter(msg=>msg.id!==m.id);
+localStorage.setItem("messages",JSON.stringify(messages));
+renderMessages();
+};
+d.appendChild(btn);
+inbox.appendChild(d);
+});
+}
+
+function createCall(){
+let type=dispatchType.value;
+let loc=dispatchLocation.value;
+if(!loc)return;
+calls.push({id:Date.now(),type,loc,units:[]});
+localStorage.setItem("calls",JSON.stringify(calls));
+dispatchLocation.value="";
+renderCalls();
+}
+
+function renderCalls(){
+dispatchList.innerHTML="";
+calls.forEach(c=>{
+let d=document.createElement("div");
+d.innerHTML=`#${c.id} ${c.type} @ ${c.loc} | Units: ${c.units.join(", ")}`;
+
+if(currentUser==="HeadDispatcher"){
+let sel=document.createElement("select");
+users.forEach(u=>{
+let o=document.createElement("option");
+o.textContent=u;
+sel.appendChild(o);
+});
+let assign=document.createElement("button");
+assign.textContent="Assign";
+assign.onclick=()=>{c.units.push(sel.value);localStorage.setItem("calls",JSON.stringify(calls));renderCalls();};
+
+let end=document.createElement("button");
+end.textContent="End";
+end.onclick=()=>{
+calls=calls.filter(call=>call.id!==c.id);
+localStorage.setItem("calls",JSON.stringify(calls));
+renderCalls();
+};
+
+d.appendChild(sel);
+d.appendChild(assign);
+d.appendChild(end);
+}
+
+dispatchList.appendChild(d);
+});
 }
 
 function panic(){
-const ts=new Date().toLocaleString("en-GB",{hour12:false});
-document.getElementById("panicPopup").style.display="block";
-crimeReports.push({from:currentUser,text:"PANIC ALERT",time:ts});
-localStorage.setItem("crimeReports",JSON.stringify(crimeReports));
-showCommanderNotifications();
-}
-
-function toggleMyPatrol(){
-patrolStatus[currentUser]=!patrolStatus[currentUser];
-localStorage.setItem("patrolStatus",JSON.stringify(patrolStatus));
-updatePatrolText();
-showCommanderNotifications();
-}
-
-function updatePatrolText(){
-document.getElementById("patrolStatusText").textContent=
-patrolStatus[currentUser]?"On Patrol":"Off Patrol";
-}
-
-// Show FIRE buttons for commander
-function addFireButtons(){["EQ20","HSW1","TESTER","EQ21","EQ22","EQ23","EQ24","EQ25","EQ26","Jacob","Aarav","NGT","LTO","LSNIPER","DasTheGamerYT"].forEach(id=>{
-let div=document.getElementById(id);
-if(!div.querySelector(".fire-btn")){
-let btn=document.createElement("button");
-btn.innerText="FIRE";
-btn.className="fire-btn";
-btn.onclick=()=>fireEmployee(div.id);
-div.appendChild(btn);
-}
-});}
-
-function fireEmployee(empId){alert("You have been fired by your commander.");document.getElementById("terminal").style.display="none";document.getElementById("firedPage").style.display="block";}
-function backToTerminal(){document.getElementById("firedPage").style.display="none";document.getElementById("terminal").style.display="block";}
-
-function toggleCrimeReport(){let box=document.getElementById("crimeReportBox");box.style.display=box.style.display==="block"?"none":"block";}
-function submitCrimeReport(){let val=document.getElementById("crimeInput").value.trim();if(!val)return;const ts=new Date().toLocaleString("en-GB",{hour12:false});crimeReports.push({from:currentUser,text:val,time:ts});localStorage.setItem("crimeReports",JSON.stringify(crimeReports));document.getElementById("crimeInput").value="";document.getElementById("crimeReportBox").style.display="none";showCommanderNotifications();}
-
-function showCommanderNotifications(){
-let box=document.getElementById("commanderNotifications"); 
-if(currentUser!=="HEADSWATCOMMANDER" && currentUser!=="HeadDispatcher" && currentUser!=="DasTheGamerYT"){box.innerHTML=""; return;} 
-box.innerHTML="<h3>Commander Notifications</h3>"; 
-if(!crimeReports.length){box.innerHTML+="<p>No new notifications</p>";} 
-else{
-box.innerHTML+="<p><strong>Reports</strong></p><ul>"; 
-crimeReports.forEach((r,i)=>{box.innerHTML+=`<li>${r.time} - ${r.from}: ${r.text}</li>`}); 
-box.innerHTML+="</ul>";
-}
-
-// Show patrol and login info for HeadDispatcher + DasTheGamerYT
-if(currentUser==="HeadDispatcher" || currentUser==="DasTheGamerYT"){
-box.innerHTML+="<p><strong>Patrol Status</strong></p><ul>";
-Object.keys(patrolStatus).forEach(emp=>{
-box.innerHTML+=`<li>${emp}: ${patrolStatus[emp]?"On Patrol":"Off Patrol"}</li>`;
-});
-box.innerHTML+="</ul>";
-
-box.innerHTML+="<p><strong>Login Activity</strong></p><ul>";
-Object.keys(loginTimestamps).forEach(emp=>{
-const ts=loginTimestamps[emp];
-box.innerHTML+=`<li>${emp}: Login ${ts.login||"-"}, Logout ${ts.logout||"-"}</li>`;
-});
-box.innerHTML+="</ul>";
-}
+let now=Date.now();
+if(now-lastPanic<30000){alert("Cooldown active");return;}
+lastPanic=now;
+panicPopup.style.display="block";
+setTimeout(()=>{panicPopup.style.display="none";},5000);
 }
 </script>
 </body>
