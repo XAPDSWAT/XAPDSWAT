@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>XAPD Secure System v1.4</title>
+<title>XAPD Secure System v1.5</title>
 <style>
 body {margin:0;font-family:Arial;background:#0a0a1f;color:white;}
 header {background:#000814;padding:20px;text-align:center;position:relative;}
@@ -11,21 +11,16 @@ header {background:#000814;padding:20px;text-align:center;position:relative;}
 section {padding:30px;max-width:900px;margin:auto;}
 .login-popup {display:none;position:fixed;top:80px;left:20px;background:black;border:1px solid #00ff66;padding:15px;z-index:1000;}
 .login-popup input {display:block;margin-bottom:10px;background:black;color:#00ff66;border:1px solid #00ff66;padding:5px;}
+.eye-btn {background:#00ff66;border:none;color:black;padding:5px;margin-left:5px;cursor:pointer;}
+
 #terminal {display:none;background:black;color:#00ff66;min-height:100vh;font-family:Consolas;}
 .terminal-header {padding:15px;border-bottom:2px solid #00ff66;}
 .terminal-box {border:1px solid #00ff66;margin:20px;padding:20px;}
 .logout-btn {background:red;color:white;border:none;padding:10px;cursor:pointer;float:right;}
-.fire-btn {background:red;color:white;border:none;padding:5px 10px;margin-left:10px;cursor:pointer;}
-.patrol-btn {background:#00ff66;color:black;border:none;padding:8px;margin-left:5px;cursor:pointer;}
-.patrol-status {margin-left:10px;font-weight:bold;}
-.panic-btn {background:orange;color:black;border:none;padding:10px;cursor:pointer;margin-top:10px;font-weight:bold;}
+.panic-btn {background:orange;color:black;border:none;padding:10px;margin-top:10px;font-weight:bold;}
 .back-btn {background:#00ff66;border:none;padding:8px;margin-top:8px;cursor:pointer;}
-.eye-btn {background:#00ff66;border:none;color:black;padding:5px;margin-left:5px;}
-#firedPage,#wrongPage,#reportFinished {display:none;background:black;color:red;height:100vh;text-align:center;padding-top:200px;font-family:Consolas;}
-#equipmentReport,#crimeReportBox {display:none;margin-top:10px;}
-#commanderNotifications {margin-top:20px;border-top:2px solid #00ff66;padding-top:15px;}
-#panicPopup {display:none;position:fixed;bottom:20px;right:20px;background:orange;color:black;padding:15px 25px;border-radius:6px;font-weight:bold;z-index:2000;}
-.hidden {display:none;}
+#wrongPage {display:none;background:black;color:red;height:100vh;text-align:center;padding-top:200px;}
+#panicPopup {display:none;position:fixed;bottom:20px;right:20px;background:orange;color:black;padding:15px;border-radius:6px;font-weight:bold;z-index:2000;}
 </style>
 </head>
 <body>
@@ -50,7 +45,7 @@ section {padding:30px;max-width:900px;margin:auto;}
 
 <section>
 <h2>Version</h2>
-<p>v1.4 - Security upgrades, panic cooldown, structured reports, permissions, activity display + dispatch, messaging, status system.</p>
+<p id="versionInfo">v1.5 - Fully upgraded dispatch & command system</p>
 </section>
 </div>
 
@@ -65,16 +60,15 @@ section {padding:30px;max-width:900px;margin:auto;}
 
 <div id="terminal">
 <div class="terminal-header">
-<h1>XAPD SECURE DATABASE TERMINAL</h1>
+<h1>XAPD TERMINAL</h1>
 <span id="currentUserDisplay"></span>
 <button class="logout-btn" onclick="logout()">LOGOUT</button>
 </div>
 
 <div class="terminal-box">
-<p>> UNIT STATUS</p>
+<p>> STATUS</p>
 <select id="statusSelect" onchange="setStatus()">
 <option>Available</option>
-<option>On Patrol</option>
 <option>Busy</option>
 <option>Responding</option>
 <option>Offline</option>
@@ -83,15 +77,26 @@ section {padding:30px;max-width:900px;margin:auto;}
 </div>
 
 <div class="terminal-box">
-<p>> DISPATCH BOARD</p>
+<p>> DISPATCH</p>
 <select id="dispatchType">
 <option>Robbery</option>
 <option>Shooting</option>
-<option>Suspicious Activity</option>
+</select>
+<select id="prioritySelect">
+<option>LOW</option>
+<option>MEDIUM</option>
+<option>HIGH</option>
 </select>
 <input id="dispatchLocation" placeholder="Location">
 <button onclick="createCall()">Create Call</button>
 <div id="dispatchList"></div>
+</div>
+
+<div class="terminal-box" id="broadcastBoxWrapper">
+<p>> BROADCAST</p>
+<textarea id="broadcastText"></textarea>
+<button onclick="sendBroadcast()">Send</button>
+<div id="broadcastBox"></div>
 </div>
 
 <div class="terminal-box">
@@ -103,14 +108,26 @@ section {padding:30px;max-width:900px;margin:auto;}
 </div>
 
 <div class="terminal-box">
-<p>> EMPLOYEE ROSTER</p>
+<p>> ROSTER</p>
 <div id="roster"></div>
+</div>
+
+<div class="terminal-box" id="logBox">
+<p>> ACTIVITY LOG</p>
+<div id="activityLog"></div>
+</div>
+
+<div class="terminal-box">
+<p>> CALL HISTORY</p>
+<select id="historyDropdown" onchange="showHistoryDetail()">
+<option value="">-- Select Call --</option>
+</select>
+<div id="historyDetail"></div>
 </div>
 
 <div class="terminal-box">
 <button class="panic-btn" onclick="panic()">PANIC</button>
 </div>
-
 </div>
 
 <div id="wrongPage">
@@ -118,23 +135,44 @@ section {padding:30px;max-width:900px;margin:auto;}
 <button class="back-btn" onclick="returnHome()">Back</button>
 </div>
 
-<div id="panicPopup">Units are on the way. Stay safe.</div>
+<div id="panicPopup">Stay safe, units are on the way.</div>
 
 <script>
 let currentUser="";
 let statuses=JSON.parse(localStorage.getItem("statuses")||"{}");
-let messages=JSON.parse(localStorage.getItem("messages")||"[]");
 let calls=JSON.parse(localStorage.getItem("calls")||"[]");
-let lastPanic=0;
+let logs=JSON.parse(localStorage.getItem("logs")||"[]");
+let historyData=JSON.parse(localStorage.getItem("history")||"[]");
+let messages=JSON.parse(localStorage.getItem("messages")||"[]");
+let broadcasts=JSON.parse(localStorage.getItem("broadcasts")||"[]");
 
-const users=["EQ20","HSW1","TESTER","EQ21","EQ22","EQ23","EQ24","EQ25","EQ26","Jacob","Aarav","LSNIPER","LTO","NGT","DasTheGamerYT","HeadDispatcher","HEADSWATCOMMANDER","M.Chaloner"];
+const users=["EQ20","HSW1","TESTER","EQ21","EQ22","EQ23","EQ24","EQ25","EQ26","LSNIPER","LTO","NGT","DasTheGamerYT","HeadDispatcher","HEADSWATCOMMANDER","M.Chaloner"];
 
-const logins={
-"HEADSWATCOMMANDER":"MyAmazingPassword",
-"EQ26":"EQ26",
-"HeadDispatcher":"DiSpAtChInG",
-"DasTheGamerYT":"TheUltimateYouTuber"
+const logins = {
+  "EQ20": "XAPDSWATPASSWORD",
+  "HSW1": "MyAmazingPassword",
+  "TESTER": "XAPDSWATPASSWORD",
+  "EQ21": "XAPDSWATPASSWORD",
+  "EQ22": "XAPDSWATPASSWORD",
+  "EQ23": "XAPDSWATPASSWORD",
+  "EQ24": "XAPDSWATPASSWORD",
+  "EQ25": "XAPDSWATPASSWORD",
+  "EQ26": "EQ26",
+  "LSNIPER": "SWATsnipingPASSWORD",
+  "LTO": "mowmowmow",
+  "NGT": "NegiotatingASmarken",
+  "DasTheGamerYT": "TheUltimateYouTuber",
+  "HeadDispatcher": "DiSpAtChInG"
 };
+
+const roles = {
+  "HSW1": "Commander",
+  "DasTheGamerYT": "Commander",
+  "HeadDispatcher": "Dispatcher"
+};
+
+function role(u){return roles[u]||"Officer";}
+function addLog(t){logs.unshift(`[${new Date().toLocaleTimeString()}] ${t}`); localStorage.setItem("logs",JSON.stringify(logs)); renderLogs();}
 
 function openLogin(){loginPopup.style.display="block";}
 function togglePassword(){password.type=password.type==="password"?"text":"password";}
@@ -142,138 +180,118 @@ function togglePassword(){password.type=password.type==="password"?"text":"passw
 function login(){
 let u=username.value;
 let p=password.value;
-if(logins[u]&&logins[u]===p){
+if(logins[u] && logins[u]===p){
 currentUser=u;
 publicSite.style.display="none";
 terminal.style.display="block";
 loginPopup.style.display="none";
-currentUserDisplay.innerText="Logged in as: "+currentUser;
+currentUserDisplay.innerText=`${u} (${role(u)})`;
+addLog(u+" logged in");
 populateUsers();
 renderAll();
 }else{
 publicSite.style.display="none";
 loginPopup.style.display="none";
 wrongPage.style.display="block";
-loginBtn.style.display="none";
 }
 }
 
-function logout(){location.reload();}
-function returnHome(){wrongPage.style.display="none";publicSite.style.display="block";}
+function logout(){addLog(currentUser+" logged out"); currentUser=""; terminal.style.display="none"; publicSite.style.display="block";}
 
-function populateUsers(){
-msgTo.innerHTML="";
-users.forEach(u=>{
-if(u!==currentUser){
-let opt=document.createElement("option");
-opt.textContent=u;
-msgTo.appendChild(opt);
-}
-});
-renderRoster();
-}
+function returnHome(){wrongPage.style.display="none"; publicSite.style.display="block";}
 
-function renderRoster(){
-roster.innerHTML="";
-users.forEach(u=>{
-if(u==="M.Chaloner" && !(currentUser==="HEADSWATCOMMANDER"||currentUser==="HeadDispatcher")) return;
-let div=document.createElement("div");
-div.textContent=u+" - "+(statuses[u]||"Unknown");
-roster.appendChild(div);
-});
-}
+function populateUsers(){msgTo.innerHTML=""; users.forEach(u=>{if(u!==currentUser){let opt=document.createElement("option"); opt.textContent=u; msgTo.appendChild(opt);}}); renderRoster();}
 
-function setStatus(){
-statuses[currentUser]=statusSelect.value;
-localStorage.setItem("statuses",JSON.stringify(statuses));
-renderAll();
-}
+function renderRoster(){roster.innerHTML=""; users.forEach(u=>{let inCall=calls.find(c=>c.units.includes(u)); let txt=inCall?`(Call ${inCall.id})`:""; let st=statuses[u]||"Unknown"; roster.innerHTML+=`<div>${u} - ${st} ${txt}</div>`;});}
 
-function renderAll(){
-statusText.innerText="Status: "+(statuses[currentUser]||"None");
-renderMessages();
-renderCalls();
-renderRoster();
-}
+function setStatus(){statuses[currentUser]=statusSelect.value; localStorage.setItem("statuses",JSON.stringify(statuses)); addLog(currentUser+" set status "+statusSelect.value); renderRoster();}
 
 function sendMessage(){
 let to=msgTo.value;
-let text=msgText.value.trim();
-if(!text)return;
+let text=msgText.value.trim(); if(!text) return;
 messages.push({id:Date.now(),from:currentUser,to,text});
 localStorage.setItem("messages",JSON.stringify(messages));
 msgText.value="";
 renderMessages();
 }
 
-function renderMessages(){
-inbox.innerHTML="<h4>Inbox</h4>";
+function renderMessages(){inbox.innerHTML="<h4>Inbox</h4>";
 messages.filter(m=>m.to===currentUser).forEach(m=>{
-let d=document.createElement("div");
-d.textContent=m.from+": "+m.text;
-let btn=document.createElement("button");
-btn.textContent="Mark Read";
-btn.onclick=()=>{
-messages=messages.filter(msg=>msg.id!==m.id);
-localStorage.setItem("messages",JSON.stringify(messages));
-renderMessages();
-};
-d.appendChild(btn);
-inbox.appendChild(d);
+let d=document.createElement("div"); d.textContent=m.from+": "+m.text;
+let btn=document.createElement("button"); btn.textContent="Mark Read";
+btn.onclick=()=>{messages=messages.filter(msg=>msg.id!==m.id); localStorage.setItem("messages",JSON.stringify(messages)); renderMessages();};
+d.appendChild(btn); inbox.appendChild(d);
 });
 }
 
 function createCall(){
-let type=dispatchType.value;
-let loc=dispatchLocation.value;
-if(!loc)return;
-calls.push({id:Date.now(),type,loc,units:[]});
+let call={id:Date.now(),type:dispatchType.value,priority:prioritySelect.value,loc:dispatchLocation.value,units:[],status:"OPEN",start:Date.now()};
+calls.push(call); localStorage.setItem("calls",JSON.stringify(calls)); addLog(currentUser+" created call"); renderCalls();
+}
+
+function panic(){
+panicPopup.style.display="block"; setTimeout(()=>{panicPopup.style.display="none";},5000);
+let call={id:Date.now(),type:"PANIC",priority:"PANIC",loc:currentUser,units:[],status:"OPEN",start:Date.now()};
+calls.unshift(call);
 localStorage.setItem("calls",JSON.stringify(calls));
-dispatchLocation.value="";
 renderCalls();
+addLog(currentUser+" PANIC");
 }
 
 function renderCalls(){
 dispatchList.innerHTML="";
+calls.sort((a,b)=>b.priority.localeCompare(a.priority));
 calls.forEach(c=>{
+let dur=Math.floor((Date.now()-c.start)/1000);
 let d=document.createElement("div");
-d.innerHTML=`#${c.id} ${c.type} @ ${c.loc} | Units: ${c.units.join(", ")}`;
-
-if(currentUser==="HeadDispatcher"){
-let sel=document.createElement("select");
-users.forEach(u=>{
-let o=document.createElement("option");
-o.textContent=u;
-sel.appendChild(o);
-});
-let assign=document.createElement("button");
-assign.textContent="Assign";
-assign.onclick=()=>{c.units.push(sel.value);localStorage.setItem("calls",JSON.stringify(calls));renderCalls();};
-
-let end=document.createElement("button");
-end.textContent="End";
-end.onclick=()=>{
-calls=calls.filter(call=>call.id!==c.id);
-localStorage.setItem("calls",JSON.stringify(calls));
-renderCalls();
-};
-
-d.appendChild(sel);
-d.appendChild(assign);
-d.appendChild(end);
-}
-
+d.innerHTML=`#${c.id} ${c.type} (${c.priority}) | ${c.units.join(", ")}`;
+let join=document.createElement("button"); join.textContent="Join"; join.onclick=()=>{if(!c.units.includes(currentUser)){c.units.push(currentUser);} localStorage.setItem("calls",JSON.stringify(calls)); renderCalls();};
+let leave=document.createElement("button"); leave.textContent="Leave"; leave.onclick=()=>{c.units=c.units.filter(u=>u!==currentUser); localStorage.setItem("calls",JSON.stringify(calls)); renderCalls();};
+d.appendChild(join); d.appendChild(leave);
+if(role(currentUser)!=="Officer"){let end=document.createElement("button"); end.textContent="End"; end.onclick=()=>{historyData.push(c); calls=calls.filter(x=>x.id!==c.id); localStorage.setItem("calls",JSON.stringify(calls)); localStorage.setItem("history",JSON.stringify(historyData)); renderAll(); addLog("Call ended "+c.id);}; d.appendChild(end);}
 dispatchList.appendChild(d);
 });
+renderHistoryDropdown();
 }
 
-function panic(){
-let now=Date.now();
-if(now-lastPanic<30000){alert("Cooldown active");return;}
-lastPanic=now;
-panicPopup.style.display="block";
-setTimeout(()=>{panicPopup.style.display="none";},5000);
+function renderHistoryDropdown(){
+historyDropdown.innerHTML='<option value="">-- Select Call --</option>';
+historyData.forEach(c=>{let opt=document.createElement("option"); opt.value=c.id; opt.textContent=`#${c.id} ${c.type} (${c.priority})`; historyDropdown.appendChild(opt);});
+}
+
+function showHistoryDetail(){let sel=historyDropdown.value; let c=historyData.find(x=>x.id==sel); historyDetail.innerHTML=c?`Type:${c.type} | Priority:${c.priority} | Units:${c.units.join(", ")}`:"";}
+
+function sendBroadcast(){
+if(!(currentUser==="HSW1"||currentUser==="HeadDispatcher")) return;
+let msg=broadcastText.value.trim(); if(!msg) return;
+broadcasts.unshift(msg);
+localStorage.setItem("broadcasts",JSON.stringify(broadcasts));
+broadcastText.value="";
+renderBroadcasts();
+}
+
+function renderBroadcasts(){
+broadcastBox.innerHTML="";
+broadcasts.slice(0,5).forEach((b,i)=>{
+let div=document.createElement("div"); div.textContent=b;
+let btn=document.createElement("button"); btn.textContent="Mark Read"; btn.onclick=()=>{broadcasts.splice(i,1); localStorage.setItem("broadcasts",JSON.stringify(broadcasts)); renderBroadcasts();};
+div.appendChild(btn);
+broadcastBox.appendChild(div);
+});
+}
+
+function renderLogs(){if(!(role(currentUser)==="Commander"||currentUser==="HeadDispatcher")){logBox.style.display="none"; return;} logBox.style.display="block"; activityLog.innerHTML=logs.slice(0,20).map(l=>`<div>${l}</div>`).join("");}
+
+function renderAll(){
+renderRoster();
+renderLogs();
+renderMessages();
+renderBroadcasts();
+renderCalls();
+versionInfo.innerText=`v1.5 | Calls:${calls.length} | Users:${users.length}`;
+document.getElementById("broadcastBoxWrapper").style.display=(currentUser==="HSW1"||currentUser==="HeadDispatcher")?"block":"none";
 }
 </script>
+
 </body>
 </html>
