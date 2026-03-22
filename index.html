@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>XAPD Secure System v1.5</title>
+<title>XAPD Secure System v1.6</title>
 <style>
 body {margin:0;font-family:Arial;background:#0a0a1f;color:white;}
 header {background:#000814;padding:20px;text-align:center;position:relative;}
@@ -11,7 +11,6 @@ header {background:#000814;padding:20px;text-align:center;position:relative;}
 section {padding:30px;max-width:900px;margin:auto;}
 .login-popup {display:none;position:fixed;top:80px;left:20px;background:black;border:1px solid #00ff66;padding:15px;z-index:1000;}
 .login-popup input {display:block;margin-bottom:10px;background:black;color:#00ff66;border:1px solid #00ff66;padding:5px;}
-.eye-btn {background:#00ff66;border:none;color:black;padding:5px;margin-left:5px;cursor:pointer;}
 
 #terminal {display:none;background:black;color:#00ff66;min-height:100vh;font-family:Consolas;}
 .terminal-header {padding:15px;border-bottom:2px solid #00ff66;}
@@ -19,8 +18,14 @@ section {padding:30px;max-width:900px;margin:auto;}
 .logout-btn {background:red;color:white;border:none;padding:10px;cursor:pointer;float:right;}
 .panic-btn {background:orange;color:black;border:none;padding:10px;margin-top:10px;font-weight:bold;}
 .back-btn {background:#00ff66;border:none;padding:8px;margin-top:8px;cursor:pointer;}
+
+.low {color:#00ff00;}
+.medium {color:yellow;}
+.high {color:red;}
+.panic {color:black;background:red;padding:2px 6px;}
+
 #wrongPage {display:none;background:black;color:red;height:100vh;text-align:center;padding-top:200px;}
-#panicPopup {display:none;position:fixed;bottom:20px;right:20px;background:orange;color:black;padding:15px;border-radius:6px;font-weight:bold;z-index:2000;}
+#panicPopup {display:none;position:fixed;bottom:20px;right:20px;background:orange;color:black;padding:15px;border-radius:6px;font-weight:bold;}
 </style>
 </head>
 <body>
@@ -45,16 +50,13 @@ section {padding:30px;max-width:900px;margin:auto;}
 
 <section>
 <h2>Version</h2>
-<p id="versionInfo">v1.5 - Fully upgraded dispatch & command system</p>
+<p id="versionInfo">v1.6 A full call status system, dispatcher-style controls, real colour-coded priority display with a legend, activity logs, call history tracking, improved roster indicators, auto-refreshing dispatch and messages, duplicate call prevention, and an upgraded panic system with location input as well as bug fixes.</p>
 </section>
 </div>
 
 <div class="login-popup" id="loginPopup">
 <input id="username" placeholder="USERNAME">
-<div style="display:flex;align-items:center;">
 <input id="password" type="password" placeholder="PASSWORD">
-<button class="eye-btn" onclick="togglePassword()">👁</button>
-</div>
 <button onclick="login()">LOGIN</button>
 </div>
 
@@ -66,6 +68,12 @@ section {padding:30px;max-width:900px;margin:auto;}
 </div>
 
 <div class="terminal-box">
+<p>> LEGEND</p>
+<p><span style="color:#00ff00;">LOW</span> | <span style="color:yellow;">MEDIUM</span> | <span style="color:red;">HIGH</span> | <span style="background:red;color:black;">PANIC</span></p>
+<p>🟢 Available | 🔴 Busy | 🚓 In Call</p>
+</div>
+
+<div class="terminal-box">
 <p>> STATUS</p>
 <select id="statusSelect" onchange="setStatus()">
 <option>Available</option>
@@ -73,7 +81,6 @@ section {padding:30px;max-width:900px;margin:auto;}
 <option>Responding</option>
 <option>Offline</option>
 </select>
-<p id="statusText"></p>
 </div>
 
 <div class="terminal-box">
@@ -86,23 +93,27 @@ section {padding:30px;max-width:900px;margin:auto;}
 <option>LOW</option>
 <option>MEDIUM</option>
 <option>HIGH</option>
+<option>PANIC</option>
 </select>
 <input id="dispatchLocation" placeholder="Location">
 <button onclick="createCall()">Create Call</button>
 <div id="dispatchList"></div>
 </div>
 
-<div class="terminal-box" id="broadcastBoxWrapper">
-<p>> BROADCAST</p>
-<textarea id="broadcastText"></textarea>
-<button onclick="sendBroadcast()">Send</button>
-<div id="broadcastBox"></div>
+<div class="terminal-box">
+<p>> ACTIVITY LOG</p>
+<div id="logBox"></div>
+</div>
+
+<div class="terminal-box">
+<p>> CALL HISTORY</p>
+<div id="historyBox"></div>
 </div>
 
 <div class="terminal-box">
 <p>> PRIVATE MESSAGES</p>
 <select id="msgTo"></select>
-<textarea id="msgText" placeholder="Message"></textarea>
+<textarea id="msgText"></textarea>
 <button onclick="sendMessage()">Send</button>
 <div id="inbox"></div>
 </div>
@@ -112,26 +123,13 @@ section {padding:30px;max-width:900px;margin:auto;}
 <div id="roster"></div>
 </div>
 
-<div class="terminal-box" id="logBox">
-<p>> ACTIVITY LOG</p>
-<div id="activityLog"></div>
-</div>
-
-<div class="terminal-box">
-<p>> CALL HISTORY</p>
-<select id="historyDropdown" onchange="showHistoryDetail()">
-<option value="">-- Select Call --</option>
-</select>
-<div id="historyDetail"></div>
-</div>
-
 <div class="terminal-box">
 <button class="panic-btn" onclick="panic()">PANIC</button>
 </div>
 </div>
 
 <div id="wrongPage">
-<h1>If you are going to attempt to hack someone's account, at least get the username and password correct.</h1>
+<h1>Access Denied</h1>
 <button class="back-btn" onclick="returnHome()">Back</button>
 </div>
 
@@ -139,157 +137,206 @@ section {padding:30px;max-width:900px;margin:auto;}
 
 <script>
 let currentUser="";
+let hideLogin=false;
+
 let statuses=JSON.parse(localStorage.getItem("statuses")||"{}");
 let calls=JSON.parse(localStorage.getItem("calls")||"[]");
-let logs=JSON.parse(localStorage.getItem("logs")||"[]");
-let historyData=JSON.parse(localStorage.getItem("history")||"[]");
 let messages=JSON.parse(localStorage.getItem("messages")||"[]");
-let broadcasts=JSON.parse(localStorage.getItem("broadcasts")||"[]");
+let logs=JSON.parse(localStorage.getItem("logs")||"[]");
+let history=JSON.parse(localStorage.getItem("history")||"[]");
 
-const users=["EQ20","HSW1","TESTER","EQ21","EQ22","EQ23","EQ24","EQ25","EQ26","LSNIPER","LTO","NGT","DasTheGamerYT","HeadDispatcher","HEADSWATCOMMANDER","M.Chaloner"];
+const users=["EQ20","HSW1","TESTER","EQ21","EQ22","EQ23","EQ24","EQ25","EQ26","LSNIPER","LTO","NGT","DasTheGamerYT","HeadDispatcher","HEADSWATCOMMANDER","M.Chaloner","S.Higgs"];
 
 const logins = {
-  "EQ20": "XAPDSWATPASSWORD",
-  "HSW1": "MyAmazingPassword",
-  "TESTER": "XAPDSWATPASSWORD",
-  "EQ21": "XAPDSWATPASSWORD",
-  "EQ22": "XAPDSWATPASSWORD",
-  "EQ23": "XAPDSWATPASSWORD",
-  "EQ24": "XAPDSWATPASSWORD",
-  "EQ25": "XAPDSWATPASSWORD",
-  "EQ26": "EQ26",
-  "LSNIPER": "SWATsnipingPASSWORD",
-  "LTO": "mowmowmow",
-  "NGT": "NegiotatingASmarken",
-  "DasTheGamerYT": "TheUltimateYoutuber",
-  "HeadDispatcher": "DiSpAtChInG"
+  "EQ20":"XAPDSWATPASSWORD","HSW1":"MyAmazingPassword","TESTER":"XAPDSWATPASSWORD",
+  "EQ21":"XAPDSWATPASSWORD","EQ22":"XAPDSWATPASSWORD","EQ23":"XAPDSWATPASSWORD",
+  "EQ24":"XAPDSWATPASSWORD","EQ25":"XAPDSWATPASSWORD","EQ26":"EQ26",
+  "LSNIPER":"SWATsnipingPASSWORD","LTO":"mowmowmow","NGT":"NegiotatingASmarken",
+  "DasTheGamerYT":"TheUltimateYoutuber","HeadDispatcher":"DiSpAtChInG",
+  "S.Higgs":"MySpectacularPassword",
+  "HEADSWATCOMMANDER":"MyAmazingPassword"
 };
 
-const roles = {
-  "HSW1": "Commander",
-  "DasTheGamerYT": "Commander",
-  "HeadDispatcher": "Dispatcher"
+const roles={
+  "HSW1":"Commander",
+  "DasTheGamerYT":"Commander",
+  "S.Higgs":"Commander",
+  "HeadDispatcher":"Dispatcher",
+  "HEADSWATCOMMANDER":"Commander"
 };
 
 function role(u){return roles[u]||"Officer";}
-function addLog(t){logs.unshift(`[${new Date().toLocaleTimeString()}] ${t}`); localStorage.setItem("logs",JSON.stringify(logs)); renderLogs();}
 
-function openLogin(){loginPopup.style.display="block";}
-function togglePassword(){password.type=password.type==="password"?"text":"password";}
+function log(t){
+logs.unshift(t);
+localStorage.setItem("logs",JSON.stringify(logs));
+logBox.innerHTML=logs.slice(0,10).join("<br>");
+}
+
+function openLogin(){if(!hideLogin) loginPopup.style.display="block";}
 
 function login(){
-let u=username.value;
-let p=password.value;
+let u=username.value,p=password.value;
 if(logins[u] && logins[u]===p){
 currentUser=u;
 publicSite.style.display="none";
 terminal.style.display="block";
 loginPopup.style.display="none";
 currentUserDisplay.innerText=`${u} (${role(u)})`;
-addLog(u+" logged in");
-populateUsers();
-renderAll();
+statusSelect.value=statuses[u]||"Available";
+populateUsers(); renderAll(); log(u+" logged in");
 }else{
-publicSite.style.display="none";
-loginPopup.style.display="none";
-wrongPage.style.display="block";
+publicSite.style.display="none"; loginPopup.style.display="none"; wrongPage.style.display="block";
 }
 }
 
-function logout(){addLog(currentUser+" logged out"); currentUser=""; terminal.style.display="none"; publicSite.style.display="block";}
+function logout(){
+log(currentUser+" logged out");
+currentUser="";
+terminal.style.display="none";
+publicSite.style.display="block";
+}
 
-function returnHome(){wrongPage.style.display="none"; publicSite.style.display="block";}
+function returnHome(){
+wrongPage.style.display="none";
+publicSite.style.display="block";
+loginBtn.style.display="none";
+hideLogin=true;
+}
 
-function populateUsers(){msgTo.innerHTML=""; users.forEach(u=>{if(u!==currentUser){let opt=document.createElement("option"); opt.textContent=u; msgTo.appendChild(opt);}}); renderRoster();}
+function populateUsers(){
+msgTo.innerHTML="";
+users.forEach(u=>{if(u!==currentUser){let o=document.createElement("option");o.textContent=u;msgTo.appendChild(o);}});
+renderRoster();
+}
 
-function renderRoster(){roster.innerHTML=""; users.forEach(u=>{let inCall=calls.find(c=>c.units.includes(u)); let txt=inCall?`(Call ${inCall.id})`:""; let st=statuses[u]||"Unknown"; roster.innerHTML+=`<div>${u} - ${st} ${txt}</div>`;});}
+function renderRoster(){
+roster.innerHTML="";
+users.forEach(u=>{
+let inCall=calls.find(c=>c.units.includes(u));
+let icon="🟢";
+if(inCall) icon="🚓";
+else if(statuses[u]==="Busy") icon="🔴";
+else if(statuses[u]==="Offline") icon="⚫";
+roster.innerHTML+=`<div>${u} ${icon}</div>`;
+});
+}
 
-function setStatus(){statuses[currentUser]=statusSelect.value; localStorage.setItem("statuses",JSON.stringify(statuses)); addLog(currentUser+" set status "+statusSelect.value); renderRoster();}
+function setStatus(){
+statuses[currentUser]=statusSelect.value;
+localStorage.setItem("statuses",JSON.stringify(statuses));
+log(currentUser + " set status to " + statusSelect.value);
+renderRoster();
+}
+
+function canDispatch(){return ["Dispatcher","Commander"].includes(role(currentUser));}
+
+function createCall(){
+if(!canDispatch()) return alert("Insufficient permissions to create call.");
+let loc=dispatchLocation.value.trim();
+if(!loc) return alert("Enter location");
+if(calls.find(c=>c.loc.toLowerCase()===loc.toLowerCase() && c.type===dispatchType.value)) return alert("Duplicate");
+
+calls.push({id:Date.now(),type:dispatchType.value,priority:prioritySelect.value,loc,units:[],status:"OPEN",start:Date.now()});
+localStorage.setItem("calls",JSON.stringify(calls));
+dispatchLocation.value="";
+renderCalls();
+}
+
+function panic(){
+let loc=prompt("Enter your location:");
+if(!loc) return;
+calls.unshift({id:Date.now(),type:"PANIC",priority:"PANIC",loc,units:[],status:"ACTIVE",start:Date.now()});
+localStorage.setItem("calls",JSON.stringify(calls));
+
+panicPopup.style.display="block";
+setTimeout(()=>panicPopup.style.display="none",3000);
+
+renderCalls();
+}
+
+const order={"PANIC":4,"HIGH":3,"MEDIUM":2,"LOW":1};
+
+function renderCalls(){
+dispatchList.innerHTML="";
+calls.sort((a,b)=>order[b.priority]-order[a.priority]);
+calls.forEach(c=>{
+let cls=c.priority.toLowerCase();
+let d=document.createElement("div");
+d.innerHTML=`<span class="${cls}">${c.priority}</span> #${c.id} | 📍 ${c.loc} | ${c.units.join(", ")} | ${c.status}`;
+
+let join=document.createElement("button");
+join.textContent="Join";
+join.onclick=()=>{
+if(c.units.includes(currentUser)) return alert("Already in this call");
+c.units.push(currentUser);
+log(currentUser+" joined call #"+c.id);
+localStorage.setItem("calls",JSON.stringify(calls));
+renderRoster();
+renderCalls();
+};
+
+let leave=document.createElement("button");
+leave.textContent="Leave";
+leave.onclick=()=>{
+c.units=c.units.filter(u=>u!==currentUser);
+localStorage.setItem("calls",JSON.stringify(calls));
+renderRoster();
+renderCalls();
+};
+
+let statusBtn=document.createElement("button");
+statusBtn.textContent="Next Status";
+statusBtn.onclick=()=>{
+let flow=["OPEN","EN ROUTE","ON SCENE","COMPLETE"];
+let i=flow.indexOf(c.status);
+if(i===-1) i=0;
+c.status=flow[i+1]||"COMPLETE";
+
+if(c.status==="COMPLETE"){
+history.push(c);
+let idx=calls.findIndex(x=>x.id===c.id);
+if(idx!==-1) calls.splice(idx,1);
+localStorage.setItem("history",JSON.stringify(history));
+}
+
+localStorage.setItem("calls",JSON.stringify(calls));
+renderRoster();
+renderCalls();
+};
+
+d.appendChild(join);
+d.appendChild(leave);
+d.appendChild(statusBtn);
+dispatchList.appendChild(d);
+});
+historyBox.innerHTML=history.map(c=>`#${c.id} ${c.type}`).join("<br>");
+}
 
 function sendMessage(){
-let to=msgTo.value;
-let text=msgText.value.trim(); if(!text) return;
-messages.push({id:Date.now(),from:currentUser,to,text});
+let to=msgTo.value,text=msgText.value.trim();
+if(!text) return;
+messages.push({from:currentUser,to,text});
 localStorage.setItem("messages",JSON.stringify(messages));
 msgText.value="";
 renderMessages();
 }
 
-function renderMessages(){inbox.innerHTML="<h4>Inbox</h4>";
+function renderMessages(){
+inbox.innerHTML="";
 messages.filter(m=>m.to===currentUser).forEach(m=>{
-let d=document.createElement("div"); d.textContent=m.from+": "+m.text;
-let btn=document.createElement("button"); btn.textContent="Mark Read";
-btn.onclick=()=>{messages=messages.filter(msg=>msg.id!==m.id); localStorage.setItem("messages",JSON.stringify(messages)); renderMessages();};
-d.appendChild(btn); inbox.appendChild(d);
-});
-}
-
-function createCall(){
-let call={id:Date.now(),type:dispatchType.value,priority:prioritySelect.value,loc:dispatchLocation.value,units:[],status:"OPEN",start:Date.now()};
-calls.push(call); localStorage.setItem("calls",JSON.stringify(calls)); addLog(currentUser+" created call"); renderCalls();
-}
-
-function panic(){
-panicPopup.style.display="block"; setTimeout(()=>{panicPopup.style.display="none";},5000);
-let call={id:Date.now(),type:"PANIC",priority:"PANIC",loc:currentUser,units:[],status:"OPEN",start:Date.now()};
-calls.unshift(call);
-localStorage.setItem("calls",JSON.stringify(calls));
-renderCalls();
-addLog(currentUser+" PANIC");
-}
-
-function renderCalls(){
-dispatchList.innerHTML="";
-calls.sort((a,b)=>b.priority.localeCompare(a.priority));
-calls.forEach(c=>{
-let dur=Math.floor((Date.now()-c.start)/1000);
 let d=document.createElement("div");
-d.innerHTML=`#${c.id} ${c.type} (${c.priority}) | ${c.units.join(", ")}`;
-let join=document.createElement("button"); join.textContent="Join"; join.onclick=()=>{if(!c.units.includes(currentUser)){c.units.push(currentUser);} localStorage.setItem("calls",JSON.stringify(calls)); renderCalls();};
-let leave=document.createElement("button"); leave.textContent="Leave"; leave.onclick=()=>{c.units=c.units.filter(u=>u!==currentUser); localStorage.setItem("calls",JSON.stringify(calls)); renderCalls();};
-d.appendChild(join); d.appendChild(leave);
-if(role(currentUser)!=="Officer"){let end=document.createElement("button"); end.textContent="End"; end.onclick=()=>{historyData.push(c); calls=calls.filter(x=>x.id!==c.id); localStorage.setItem("calls",JSON.stringify(calls)); localStorage.setItem("history",JSON.stringify(historyData)); renderAll(); addLog("Call ended "+c.id);}; d.appendChild(end);}
-dispatchList.appendChild(d);
-});
-renderHistoryDropdown();
-}
-
-function renderHistoryDropdown(){
-historyDropdown.innerHTML='<option value="">-- Select Call --</option>';
-historyData.forEach(c=>{let opt=document.createElement("option"); opt.value=c.id; opt.textContent=`#${c.id} ${c.type} (${c.priority})`; historyDropdown.appendChild(opt);});
-}
-
-function showHistoryDetail(){let sel=historyDropdown.value; let c=historyData.find(x=>x.id==sel); historyDetail.innerHTML=c?`Type:${c.type} | Priority:${c.priority} | Units:${c.units.join(", ")}`:"";}
-
-function sendBroadcast(){
-if(!(currentUser==="HSW1"||currentUser==="HeadDispatcher")) return;
-let msg=broadcastText.value.trim(); if(!msg) return;
-broadcasts.unshift(msg);
-localStorage.setItem("broadcasts",JSON.stringify(broadcasts));
-broadcastText.value="";
-renderBroadcasts();
-}
-
-function renderBroadcasts(){
-broadcastBox.innerHTML="";
-broadcasts.slice(0,5).forEach((b,i)=>{
-let div=document.createElement("div"); div.textContent=b;
-let btn=document.createElement("button"); btn.textContent="Mark Read"; btn.onclick=()=>{broadcasts.splice(i,1); localStorage.setItem("broadcasts",JSON.stringify(broadcasts)); renderBroadcasts();};
-div.appendChild(btn);
-broadcastBox.appendChild(div);
+d.textContent=m.from+": "+m.text;
+inbox.appendChild(d);
 });
 }
 
-function renderLogs(){if(!(role(currentUser)==="Commander"||currentUser==="HeadDispatcher")){logBox.style.display="none"; return;} logBox.style.display="block"; activityLog.innerHTML=logs.slice(0,20).map(l=>`<div>${l}</div>`).join("");}
+setInterval(()=>{renderMessages();renderCalls();},3000);
 
 function renderAll(){
 renderRoster();
-renderLogs();
 renderMessages();
-renderBroadcasts();
 renderCalls();
-versionInfo.innerText=`v1.5 | Calls:${calls.length} | Users:${users.length}`;
-document.getElementById("broadcastBoxWrapper").style.display=(currentUser==="HSW1"||currentUser==="HeadDispatcher")?"block":"none";
 }
 </script>
 
